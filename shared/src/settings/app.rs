@@ -177,7 +177,7 @@ impl SettingsDeserializeExt for AppSettingsAppDeserializer {
         Ok(Box::new(AppSettingsApp {
             name: deserializer
                 .take_raw_setting("name")
-                .unwrap_or_else(|| "Calagopus".into()),
+                .unwrap_or_else(|| "Hallow Panel".into()),
             icon: deserializer
                 .take_raw_setting("icon")
                 .unwrap_or_else(|| "/icon.svg".into()),
