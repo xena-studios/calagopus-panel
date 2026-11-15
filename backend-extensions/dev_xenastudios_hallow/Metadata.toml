@@ -1,0 +1,3 @@
+package_name = "dev.xenastudios.hallow"
+name = "Hallow"
+panel_version = ">=1.2.10"

@@ -1,0 +1,15 @@
+[package]
+name = "dev_xenastudios_hallow"
+description = "Hallow network features for the Hallow Panel: network, players, punishments and staff."
+authors = ["Xena Studios"]
+version = "0.1.0"
+edition = { workspace = true }
+
+[dependencies]
+shared = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+axum = { workspace = true }
+serde = { workspace = true }
+utoipa = { workspace = true }
+utoipa-axum = { workspace = true }

@@ -2365,6 +2365,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "dev_xenastudios_hallow"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "serde",
+ "shared",
+ "tracing",
+ "utoipa",
+ "utoipa-axum",
+]
+
+[[package]]
 name = "dialoguer"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2680,6 +2693,7 @@ dependencies = [
 name = "extension-internal-list"
 version = "1.2.10"
 dependencies = [
+ "dev_xenastudios_hallow",
  "semver",
  "shared",
 ]
