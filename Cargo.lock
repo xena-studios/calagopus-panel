@@ -2371,6 +2371,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
+ "chrono",
  "compact_str 0.10.0",
  "indexmap 2.14.2",
  "reqwest",
@@ -2381,6 +2382,7 @@ dependencies = [
  "tracing",
  "utoipa",
  "utoipa-axum",
+ "uuid",
 ]
 
 [[package]]
