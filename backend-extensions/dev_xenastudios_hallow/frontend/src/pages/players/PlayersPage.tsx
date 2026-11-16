@@ -1,6 +1,12 @@
 import {
+  faBan,
+  faCommentSlash,
+  faCrown,
   faGavel,
   faLocationDot,
+  faRightFromBracket,
+  faRotateLeft,
+  faTriangleExclamation,
   faShieldHalved,
   faTowerBroadcast,
   faUserSlash,
@@ -10,9 +16,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Avatar, Group, Skeleton, Stack, Text, Title } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router';
+import Button from '@/elements/buttons/Button.tsx';
 import AdminContentContainer from '@/elements/containers/AdminContentContainer.tsx';
 import Card from '@/elements/data-display/Card.tsx';
 import Alert from '@/elements/feedback/Alert.tsx';
+import Tooltip from '@/elements/overlays/Tooltip.tsx';
 import Tabs from '@/elements/layout/Tabs.tsx';
 import Code from '@/elements/typography/Code.tsx';
 import { useAdminCan } from '@/plugins/usePermissions.ts';
@@ -21,10 +30,14 @@ import getPunishments from '../../api/network/getPunishments.ts';
 import getSignals from '../../api/network/getSignals.ts';
 import ComingNext from '../../components/ComingNext.tsx';
 import ControlPlaneError from '../../components/ControlPlaneError.tsx';
+import IssuePunishmentModal from '../../components/IssuePunishmentModal.tsx';
+import PlayerRanksCard from '../../components/PlayerRanksCard.tsx';
 import PlayerSearch, { usePlayerName } from '../../components/PlayerSearch.tsx';
 import PunishmentTable from '../../components/PunishmentTable.tsx';
+import RevokePunishmentModal from '../../components/RevokePunishmentModal.tsx';
 import SignalTable, { SignalSummary } from '../../components/SignalTable.tsx';
 import StatusBadge from '../../components/StatusBadge.tsx';
+import type { PunishmentKind } from '../../lib/moderation.ts';
 import { hallowQueryKeys } from '../../lib/queryKeys.ts';
 
 function Detail({ icon, label, children }: { icon: typeof faUsers; label: string; children: React.ReactNode }) {
@@ -40,7 +53,14 @@ function Detail({ icon, label, children }: { icon: typeof faUsers; label: string
 function PlayerProfile({ name }: { name: string }) {
   const canPunishments = useAdminCan('hallow.punishments.read');
   const canSignals = useAdminCan('hallow.anticheat.read');
-  const [tab, setTab] = useState<string | null>(canPunishments ? 'punishments' : 'anticheat');
+  const canManage = useAdminCan('hallow.punishments.manage');
+  const canRanks = useAdminCan('hallow.ranks.read');
+  const canManageRanks = useAdminCan('hallow.ranks.manage');
+  const [tab, setTab] = useState<string | null>(
+    canPunishments ? 'punishments' : canSignals ? 'anticheat' : 'ranks',
+  );
+  const [issuing, setIssuing] = useState<PunishmentKind | null>(null);
+  const [revoking, setRevoking] = useState<'ban' | 'mute' | null>(null);
 
   const presence = useQuery({
     queryKey: hallowQueryKeys.player(name),
@@ -95,8 +115,19 @@ function PlayerProfile({ name }: { name: string }) {
   const activeBan = activePunishments.find((p) => p.kind === 'ban');
   const activeMute = activePunishments.find((p) => p.kind === 'mute');
 
+  const username = player?.username ?? name;
+
   return (
     <Stack gap='lg'>
+      <IssuePunishmentModal
+        opened={issuing !== null}
+        onClose={() => setIssuing(null)}
+        target={username}
+        kind={issuing ?? 'ban'}
+      />
+      {revoking && (
+        <RevokePunishmentModal opened onClose={() => setRevoking(null)} kind={revoking} target={username} />
+      )}
       <Card className='hallow-profile'>
         <div className='flex flex-col md:flex-row md:items-center gap-4'>
           <Avatar size={64} radius='md' color='hallow' variant='light'>
@@ -127,10 +158,65 @@ function PlayerProfile({ name }: { name: string }) {
               </Text>
             )}
           </Stack>
+          {canManage && (
+            <Group gap='xs' className='md:self-start'>
+              {activeBan ? (
+                <Button
+                  variant='light'
+                  color='teal'
+                  leftSection={<FontAwesomeIcon icon={faRotateLeft} />}
+                  onClick={() => setRevoking('ban')}
+                >
+                  Unban
+                </Button>
+              ) : (
+                <Button color='red' leftSection={<FontAwesomeIcon icon={faBan} />} onClick={() => setIssuing('ban')}>
+                  Ban
+                </Button>
+              )}
+              {activeMute ? (
+                <Button
+                  variant='light'
+                  color='teal'
+                  leftSection={<FontAwesomeIcon icon={faRotateLeft} />}
+                  onClick={() => setRevoking('mute')}
+                >
+                  Unmute
+                </Button>
+              ) : (
+                <Button
+                  variant='light'
+                  color='orange'
+                  leftSection={<FontAwesomeIcon icon={faCommentSlash} />}
+                  onClick={() => setIssuing('mute')}
+                >
+                  Mute
+                </Button>
+              )}
+              <Tooltip label='Only players who are online can be kicked' disabled={!!player}>
+                <Button
+                  variant='light'
+                  color='yellow'
+                  leftSection={<FontAwesomeIcon icon={faRightFromBracket} />}
+                  disabled={!player}
+                  onClick={() => setIssuing('kick')}
+                >
+                  Kick
+                </Button>
+              </Tooltip>
+              <Button
+                variant='default'
+                leftSection={<FontAwesomeIcon icon={faTriangleExclamation} />}
+                onClick={() => setIssuing('warn')}
+              >
+                Warn
+              </Button>
+            </Group>
+          )}
         </div>
       </Card>
 
-      {(canPunishments || canSignals) && (
+      {(canPunishments || canSignals || canRanks) && (
         <Tabs value={tab} onChange={setTab}>
           <Tabs.List mb='md'>
             {canPunishments && (
@@ -143,13 +229,27 @@ function PlayerProfile({ name }: { name: string }) {
                 Anticheat signals{signals.data ? ` (${signals.data.signals.length})` : ''}
               </Tabs.Tab>
             )}
+            {canRanks && (
+              <Tabs.Tab value='ranks' leftSection={<FontAwesomeIcon icon={faCrown} />}>
+                Ranks
+              </Tabs.Tab>
+            )}
           </Tabs.List>
 
           <Tabs.Panel value='punishments'>
             {punishments.error ? (
               <ControlPlaneError error={punishments.error} onRetry={punishments.refetch} />
             ) : punishments.data ? (
-              <PunishmentTable punishments={punishments.data.punishments} />
+              <Stack gap='xs'>
+                <PunishmentTable punishments={punishments.data.punishments} />
+                <Group justify='flex-end'>
+                  <Link to={`/admin/hallow/punishments?name=${encodeURIComponent(username)}`}>
+                    <Button variant='subtle' size='xs'>
+                      Full history
+                    </Button>
+                  </Link>
+                </Group>
+              </Stack>
             ) : (
               <Skeleton height={120} radius='md' />
             )}
@@ -165,6 +265,9 @@ function PlayerProfile({ name }: { name: string }) {
             ) : (
               <Skeleton height={120} radius='md' />
             )}
+          </Tabs.Panel>
+          <Tabs.Panel value='ranks'>
+            {tab === 'ranks' && <PlayerRanksCard name={username} canManage={canManageRanks} />}
           </Tabs.Panel>
         </Tabs>
       )}
@@ -188,11 +291,12 @@ export default function PlayersPage() {
             today={[
               'Online status, proxy and server, from live presence',
               'Punishment history, active bans and mutes',
-              'Recent anticheat signal samples',
+              'Recent anticheat signal samples, and their ranks',
+              'Ban, mute, kick or warn in one click',
             ]}
             next={[
               'Search by UUID and IP, and a list of who is online',
-              'Profiles with ranks, stats, sessions and alts',
+              'Profiles with stats, sessions and alts',
               'Chat and command logs',
             ]}
           >

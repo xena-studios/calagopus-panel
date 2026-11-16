@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 mod control_plane;
 mod fleet;
+mod moderation;
 mod network;
 mod routes;
 mod settings;
@@ -50,14 +51,26 @@ impl Extension for ExtensionStruct {
         builder.add_admin_permission_group(
             "hallow",
             PermissionGroup {
-                description: "Hallow network features: the network overview, players, punishments, anticheat and the fleet manager.",
+                description: "Hallow network features: the network overview, players, punishments, ranks, anticheat and the fleet manager.",
                 permissions: IndexMap::from([
                     (
                         "network.read",
                         "Allows viewing the network overview: proxies, servers and the player count.",
                     ),
                     ("players.read", "Allows looking players up by name and seeing where they are."),
-                    ("punishments.read", "Allows viewing players' punishment history."),
+                    (
+                        "punishments.read",
+                        "Allows viewing punishments: players' history, the network-wide list and the reason templates.",
+                    ),
+                    (
+                        "punishments.manage",
+                        "Allows banning, muting, kicking and warning players, lifting bans and mutes, and editing reason templates.",
+                    ),
+                    ("ranks.read", "Allows viewing Hallow ranks, their permission nodes and players' ranks."),
+                    (
+                        "ranks.manage",
+                        "Allows creating, editing and deleting Hallow ranks, and giving or taking them from players.",
+                    ),
                     ("anticheat.read", "Allows viewing players' anticheat signals."),
                     ("fleet.read", "Allows viewing the fleet manager's settings and their history."),
                     (
