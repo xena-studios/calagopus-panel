@@ -21,6 +21,15 @@ export interface AdminRouteDefinition extends RouteDefinition {
   category?: string;
 }
 
+export interface AdminSidebarCategoryDefinition {
+  key: string;
+  label: LazyString;
+  /** Shows a toggle on the category header so its routes can be hidden. */
+  collapsible?: boolean;
+  /** Starts collapsed until the user opens it (remembered per browser). Needs `collapsible`. */
+  defaultCollapsed?: boolean;
+}
+
 export interface ServerRouteDefinition extends RouteDefinition {
   permission?: string | string[] | null;
 }
