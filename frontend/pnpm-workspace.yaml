@@ -1,6 +1,11 @@
 packages:
   - 'extensions/*'
   - '../backend-extensions/*/frontend'
+  # extensions/dev_xenastudios_hallow is a compatibility symlink to the
+  # backend extension's frontend, which the line above already includes.
+  # Listing it twice gives one project two lockfile importers, and pnpm 12
+  # then rejects the lockfile under --frozen-lockfile.
+  - '!extensions/dev_xenastudios_hallow'
 allowBuilds:
   '@tailwindcss/oxide': true
   esbuild: true
