@@ -2,12 +2,14 @@ import type { AdminRouteDefinition, AdminSidebarCategoryDefinition } from 'share
 import type { RouteRegistry } from 'shared/src/registries/routes.ts';
 import {
   faCrown,
+  faCubes,
   faGamepad,
   faGauge,
   faGavel,
   faGlobe,
   faHeartPulse,
   faLayerGroup,
+  faShapes,
   faShieldHalved,
   faSliders,
 } from '@fortawesome/free-solid-svg-icons';
@@ -16,6 +18,8 @@ import { Navigate } from 'react-router';
 import AnticheatPage from './pages/anticheat/AnticheatPage.tsx';
 import FleetOverviewPage from './pages/fleet/FleetOverviewPage.tsx';
 import FleetSettingsPage from './pages/fleet/FleetSettingsPage.tsx';
+import InstancesPage from './pages/instances/InstancesPage.tsx';
+import KindsPage from './pages/kinds/KindsPage.tsx';
 import HallowAdminIndex from './pages/home/HallowAdminIndex.tsx';
 import PanelStatusPage from './pages/home/PanelStatusPage.tsx';
 import NetworkSettingsPage from './pages/network-settings/NetworkSettingsPage.tsx';
@@ -74,6 +78,8 @@ const ROUTE_ORDER = [
   '/hallow/anticheat',
   '/hallow/network-settings',
   '/hallow/fleet',
+  '/hallow/instances',
+  '/hallow/kinds',
   '/nodes/*',
   '/servers/*',
   '/locations/*',
@@ -150,6 +156,22 @@ const hallowRoutes: AdminRouteDefinition[] = [
     permission: ['nodes.*'],
     category: FLEET,
     exact: true,
+  },
+  {
+    name: 'Instances',
+    icon: faCubes,
+    path: '/hallow/instances',
+    element: InstancesPage,
+    permission: 'hallow.instances.read',
+    category: FLEET,
+  },
+  {
+    name: 'Game kinds',
+    icon: faShapes,
+    path: '/hallow/kinds',
+    element: KindsPage,
+    permission: 'hallow.kinds.read',
+    category: FLEET,
   },
   {
     name: 'Fleet settings',

@@ -1,5 +1,4 @@
 import {
-  faArrowsRotate,
   faDoorOpen,
   faNetworkWired,
   faServer,
@@ -9,40 +8,17 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Group, Stack, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
-import ActionIcon from '@/elements/buttons/ActionIcon.tsx';
 import AdminContentContainer from '@/elements/containers/AdminContentContainer.tsx';
-import Tooltip from '@/elements/overlays/Tooltip.tsx';
-import FormattedTimestamp from '@/elements/time/FormattedTimestamp.tsx';
 import getNetwork from '../../api/network/getNetwork.ts';
 import ControlPlaneError from '../../components/ControlPlaneError.tsx';
+import LiveIndicator from '../../components/LiveIndicator.tsx';
 import MetricCard from '../../components/MetricCard.tsx';
 import { hallowQueryKeys } from '../../lib/queryKeys.ts';
+import InstancesSummary from './InstancesSummary.tsx';
 import ProxyTable from './ProxyTable.tsx';
 import ServerTable from './ServerTable.tsx';
 
 const REFRESH_MS = 5_000;
-
-function LiveIndicator({ at, refreshing, onRefresh }: { at?: number; refreshing: boolean; onRefresh: () => void }) {
-  return (
-    <Group gap='xs' wrap='nowrap'>
-      <span className='hallow-live' data-active={at !== undefined || undefined}>
-        <span className='hallow-status-dot' data-status={at !== undefined ? 'online' : 'unknown'} />
-        {at !== undefined ? (
-          <span>
-            Live · updated <FormattedTimestamp timestamp={at} precise />
-          </span>
-        ) : (
-          <span>Not connected</span>
-        )}
-      </span>
-      <Tooltip label='Refresh now'>
-        <ActionIcon variant='subtle' color='gray' onClick={onRefresh} loading={refreshing} aria-label='Refresh now'>
-          <FontAwesomeIcon icon={faArrowsRotate} />
-        </ActionIcon>
-      </Tooltip>
-    </Group>
-  );
-}
 
 // Admin landing page: network health from the control plane, refreshed every few seconds.
 export default function OverviewPage() {
@@ -69,7 +45,7 @@ export default function OverviewPage() {
   return (
     <AdminContentContainer
       title='Overview'
-      subtitle='Live health of the Hallow network: players, proxies and servers.'
+      subtitle='Live health of the Hallow network: players, instances, proxies and servers.'
       contentRight={
         <LiveIndicator at={data && !error ? dataUpdatedAt : undefined} refreshing={isFetching} onRefresh={refetch} />
       }
@@ -122,6 +98,8 @@ export default function OverviewPage() {
                 />
               </div>
             </div>
+
+            <InstancesSummary />
 
             <section>
               <Group justify='space-between' mb='xs'>
