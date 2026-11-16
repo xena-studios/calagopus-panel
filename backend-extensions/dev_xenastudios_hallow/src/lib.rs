@@ -78,6 +78,10 @@ impl Extension for ExtensionStruct {
                         "Allows viewing the lobby and game instances the control plane runs: state, node, address and players.",
                     ),
                     ("instances.manage", "Allows ending lobby and game instances."),
+                    (
+                        "instances.console",
+                        "Allows reading lobby and game instances' consoles and sending them commands.",
+                    ),
                     ("kinds.read", "Allows viewing server kinds: the image and scaling of each game, lobby and hub."),
                     (
                         "kinds.manage",
