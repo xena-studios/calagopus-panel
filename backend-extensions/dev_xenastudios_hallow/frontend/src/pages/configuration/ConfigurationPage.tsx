@@ -31,7 +31,8 @@ function validUrl(value: string): string | null {
   }
 }
 
-// Admin > Extensions > Hallow: where the panel finds the Hallow control plane.
+// Where the panel finds the Hallow control plane. Shown on Network settings and on
+// Admin > Extensions > Hallow.
 export default function ConfigurationPage() {
   const { addToast } = useToast();
   const queryClient = useQueryClient();
@@ -65,8 +66,8 @@ export default function ConfigurationPage() {
       .then(() => {
         addToast('Hallow settings saved.', 'success');
         invalidate();
-        // The fleet page may have shown "not configured"; let it try again.
-        queryClient.invalidateQueries({ queryKey: hallowQueryKeys.fleetSettings() });
+        // Pages may have shown "not configured"; let every Hallow query try again.
+        queryClient.invalidateQueries({ queryKey: hallowQueryKeys.all() });
       })
       .catch((err) => addToast(httpErrorToHuman(err), 'error'))
       .finally(() => setSaving(false));
