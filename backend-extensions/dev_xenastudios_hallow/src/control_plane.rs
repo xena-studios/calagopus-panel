@@ -59,9 +59,10 @@ impl ControlPlane {
     /// Sends a request and returns the JSON body of a 2xx answer untouched, so
     /// fields the panel doesn't know about pass through.
     ///
-    /// A 400 or 422 keeps its status, with the control plane's `code`,
-    /// `message` and `fields`, plus the panel's usual `errors` list so the
-    /// frontend's error helpers show the message. Anything else is a 502.
+    /// A 400, 409 or 422 keeps its status (422 becomes 400), with the control
+    /// plane's `code`, `message` and `fields`, plus the panel's usual `errors`
+    /// list so the frontend's error helpers show the message. A 404 for a
+    /// missing record stays a 404. Anything else is a 502.
     pub async fn send(
         &self,
         request: reqwest::RequestBuilder,
@@ -100,6 +101,10 @@ impl ControlPlane {
         let body: Option<serde_json::Value> = serde_json::from_slice(&bytes).ok();
 
         if status.is_success() {
+            // A 204 (a delete) has no body.
+            if bytes.is_empty() {
+                return Ok(Some(serde_json::Value::Null));
+            }
             return body.map(Some).ok_or_else(|| {
                 bad_gateway(
                     "The Hallow control plane answered with something other than JSON.".into(),
@@ -122,7 +127,7 @@ impl ControlPlane {
         }
 
         match status {
-            StatusCode::BAD_REQUEST | StatusCode::UNPROCESSABLE_ENTITY => {
+            StatusCode::BAD_REQUEST | StatusCode::UNPROCESSABLE_ENTITY | StatusCode::CONFLICT => {
                 let body = body.unwrap_or_default();
                 let message = message.unwrap_or_else(|| "The control plane rejected the request.".into());
 
@@ -132,7 +137,11 @@ impl ControlPlane {
                     "message": message,
                     "fields": body.get("fields").cloned().unwrap_or_else(|| serde_json::json!({})),
                 }))
-                .with_status(StatusCode::BAD_REQUEST))
+                .with_status(if status == StatusCode::CONFLICT {
+                    StatusCode::CONFLICT
+                } else {
+                    StatusCode::BAD_REQUEST
+                }))
             }
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => Err(bad_gateway(
                 "The Hallow control plane rejected the panel's token. Check it under Admin > Extensions > Hallow.".into(),
@@ -141,9 +150,17 @@ impl ControlPlane {
                 Some(message) => format!("The Hallow control plane is unavailable: {message}"),
                 None => "The Hallow control plane is unavailable.".into(),
             })),
-            StatusCode::NOT_FOUND => Err(bad_gateway(
-                "The Hallow control plane does not know this endpoint. Is it up to date?".into(),
-            )),
+            StatusCode::NOT_FOUND if message.as_deref() == Some("no such endpoint") => {
+                Err(bad_gateway(
+                    "The Hallow control plane does not know this endpoint. Is it up to date?"
+                        .into(),
+                ))
+            }
+            // A missing record (a template, a rank, a player): passed on as is.
+            StatusCode::NOT_FOUND => Err(ApiResponse::error(
+                message.unwrap_or_else(|| "Not found.".into()),
+            )
+            .with_status(StatusCode::NOT_FOUND)),
             _ => Err(bad_gateway(match message {
                 Some(message) => format!("The Hallow control plane answered {status}: {message}"),
                 None => format!("The Hallow control plane answered {status}."),

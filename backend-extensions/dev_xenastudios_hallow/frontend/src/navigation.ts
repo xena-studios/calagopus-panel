@@ -1,6 +1,7 @@
 import type { AdminRouteDefinition, AdminSidebarCategoryDefinition } from 'shared';
 import type { RouteRegistry } from 'shared/src/registries/routes.ts';
 import {
+  faCrown,
   faGamepad,
   faGauge,
   faGavel,
@@ -21,6 +22,7 @@ import NetworkSettingsPage from './pages/network-settings/NetworkSettingsPage.ts
 import OverviewPage from './pages/overview/OverviewPage.tsx';
 import PlayersPage from './pages/players/PlayersPage.tsx';
 import PunishmentsPage from './pages/punishments/PunishmentsPage.tsx';
+import RanksPage from './pages/ranks/RanksPage.tsx';
 
 // The admin sidebar, network first. Calagopus is laid out for a hosting company; Hallow's admins
 // run one Minecraft network, so the network comes first, then the machines it runs on, then staff
@@ -68,6 +70,7 @@ const ROUTE_ORDER = [
   '/hallow/overview',
   '/hallow/players',
   '/hallow/punishments',
+  '/hallow/ranks',
   '/hallow/anticheat',
   '/hallow/network-settings',
   '/hallow/fleet',
@@ -113,6 +116,14 @@ const hallowRoutes: AdminRouteDefinition[] = [
     path: '/hallow/punishments',
     element: PunishmentsPage,
     permission: 'hallow.punishments.read',
+    category: OVERVIEW,
+  },
+  {
+    name: 'Ranks',
+    icon: faCrown,
+    path: '/hallow/ranks',
+    element: RanksPage,
+    permission: 'hallow.ranks.read',
     category: OVERVIEW,
   },
   {
