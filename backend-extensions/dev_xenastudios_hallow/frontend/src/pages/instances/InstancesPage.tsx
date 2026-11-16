@@ -1,4 +1,11 @@
-import { faCircleExclamation, faCubes, faHourglassHalf, faPowerOff, faUsers } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCircleExclamation,
+  faCubes,
+  faHourglassHalf,
+  faPowerOff,
+  faTerminal,
+  faUsers,
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Group, Stack, Table, Text } from '@mantine/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -17,6 +24,7 @@ import { useAdminCan } from '@/plugins/usePermissions.ts';
 import { useToast } from '@/providers/ToastProvider.tsx';
 import { endInstance, getInstances } from '../../api/instances.ts';
 import ControlPlaneError from '../../components/ControlPlaneError.tsx';
+import InstanceConsoleModal from '../../components/InstanceConsoleModal.tsx';
 import InstanceStateBadge from '../../components/InstanceStateBadge.tsx';
 import LiveIndicator from '../../components/LiveIndicator.tsx';
 import MetricCard from '../../components/MetricCard.tsx';
@@ -53,17 +61,22 @@ function InstanceTable({
   now,
   loading,
   canManage,
+  canConsole,
   filtered,
   onEnd,
+  onConsole,
 }: {
   instances: InstanceInfo[];
   now: number;
   loading: boolean;
   canManage: boolean;
+  canConsole: boolean;
   filtered: boolean;
   onEnd: (instance: InstanceInfo) => void;
+  onConsole: (instance: InstanceInfo) => void;
 }) {
-  const columns = canManage ? 9 : 8;
+  const actions = canManage || canConsole;
+  const columns = actions ? 9 : 8;
 
   return (
     <Card p={0} className='overflow-hidden'>
@@ -79,7 +92,7 @@ function InstanceTable({
               <Table.Th ta='right'>Players</Table.Th>
               <Table.Th ta='right'>Age</Table.Th>
               <Table.Th>Reason</Table.Th>
-              {canManage && <Table.Th />}
+              {actions && <Table.Th />}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -97,6 +110,8 @@ function InstanceTable({
             ) : (
               instances.map((instance) => {
                 const ending = instance.state === 'ending' || instance.state === 'deleting';
+                // A console needs a running server on Wings.
+                const running = instance.state === 'starting' || instance.state === 'ready' || instance.state === 'ending';
 
                 return (
                   <Table.Tr key={instance.name}>
@@ -167,20 +182,34 @@ function InstanceTable({
                         </Text>
                       )}
                     </Table.Td>
-                    {canManage && (
+                    {actions && (
                       <Table.Td>
-                        <Group justify='flex-end' wrap='nowrap'>
-                          <Tooltip label={ending ? 'Already ending' : 'End now'}>
-                            <ActionIcon
-                              variant='subtle'
-                              color='red'
-                              disabled={ending}
-                              onClick={() => onEnd(instance)}
-                              aria-label={`End ${instance.name}`}
-                            >
-                              <FontAwesomeIcon icon={faPowerOff} />
-                            </ActionIcon>
-                          </Tooltip>
+                        <Group justify='flex-end' wrap='nowrap' gap='xs'>
+                          {canConsole && (
+                            <Tooltip label={running ? 'Console' : 'Not running'}>
+                              <ActionIcon
+                                variant='subtle'
+                                disabled={!running}
+                                onClick={() => onConsole(instance)}
+                                aria-label={`Console of ${instance.name}`}
+                              >
+                                <FontAwesomeIcon icon={faTerminal} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                          {canManage && (
+                            <Tooltip label={ending ? 'Already ending' : 'End now'}>
+                              <ActionIcon
+                                variant='subtle'
+                                color='red'
+                                disabled={ending}
+                                onClick={() => onEnd(instance)}
+                                aria-label={`End ${instance.name}`}
+                              >
+                                <FontAwesomeIcon icon={faPowerOff} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
                         </Group>
                       </Table.Td>
                     )}
@@ -201,8 +230,10 @@ export default function InstancesPage() {
   const { addToast } = useToast();
   const queryClient = useQueryClient();
   const canManage = useAdminCan('hallow.instances.manage');
+  const canConsole = useAdminCan('hallow.instances.console');
   const [params, setParams] = useSearchParams();
   const [ending, setEnding] = useState<InstanceInfo | null>(null);
+  const [consoleOf, setConsoleOf] = useState<InstanceInfo | null>(null);
 
   const kind = params.get('kind') ?? 'all';
   const state = params.get('state') ?? 'all';
@@ -266,6 +297,8 @@ export default function InstancesPage() {
           : 'Nobody is on it. '}
         The control plane starts another if {ending?.kind ?? 'the kind'} still needs one.
       </ConfirmationModal>
+
+      <InstanceConsoleModal instance={consoleOf} onClose={() => setConsoleOf(null)} />
 
       <Stack gap='lg'>
         {error && <ControlPlaneError error={error} onRetry={refetch} retrying={isFetching} />}
@@ -340,8 +373,10 @@ export default function InstancesPage() {
               now={data?.fetched_at_ms ?? 0}
               loading={loading}
               canManage={canManage}
+              canConsole={canConsole}
               filtered={shown.length !== instances.length}
               onEnd={setEnding}
+              onConsole={setConsoleOf}
             />
           </>
         )}

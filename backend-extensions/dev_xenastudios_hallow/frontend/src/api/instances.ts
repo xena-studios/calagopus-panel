@@ -13,6 +13,21 @@ export async function getInstances(): Promise<InstanceList> {
   return instanceListSchema.parse(data);
 }
 
+const instanceConsoleSchema = z.object({
+  token: z.string(),
+  url: z.string(),
+  server_uuid: z.string(),
+  node: z.string(),
+});
+
+export type InstanceConsole = z.infer<typeof instanceConsoleSchema>;
+
+// A Wings console token for the instance's server, and the websocket URL to use it on.
+export async function getInstanceConsole(name: string): Promise<InstanceConsole> {
+  const { data } = await axiosInstance.get(`/api/admin/hallow/instances/${encodeURIComponent(name)}/websocket`);
+  return instanceConsoleSchema.parse(data);
+}
+
 export async function endInstance(name: string): Promise<void> {
   await axiosInstance.delete(`/api/admin/hallow/instances/${encodeURIComponent(name)}`);
 }
