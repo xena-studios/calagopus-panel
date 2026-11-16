@@ -66,6 +66,26 @@ impl ControlPlane {
         &self,
         request: reqwest::RequestBuilder,
     ) -> Result<serde_json::Value, ApiResponse> {
+        self.send_inner(request, false)
+            .await
+            .map(Option::unwrap_or_default)
+    }
+
+    /// Like [`Self::send`], but a 404 for a missing record (a player who isn't
+    /// online, or never joined) is `None` instead of an error. A 404 for an
+    /// endpoint the control plane doesn't have stays an error.
+    pub async fn send_optional(
+        &self,
+        request: reqwest::RequestBuilder,
+    ) -> Result<Option<serde_json::Value>, ApiResponse> {
+        self.send_inner(request, true).await
+    }
+
+    async fn send_inner(
+        &self,
+        request: reqwest::RequestBuilder,
+        missing_is_none: bool,
+    ) -> Result<Option<serde_json::Value>, ApiResponse> {
         let response = request.send().await.map_err(|err| {
             tracing::warn!("hallow: control plane request failed: {err:#}");
             bad_gateway(format!("Could not reach the Hallow control plane: {err}"))
@@ -80,7 +100,7 @@ impl ControlPlane {
         let body: Option<serde_json::Value> = serde_json::from_slice(&bytes).ok();
 
         if status.is_success() {
-            return body.ok_or_else(|| {
+            return body.map(Some).ok_or_else(|| {
                 bad_gateway(
                     "The Hallow control plane answered with something other than JSON.".into(),
                 )
@@ -92,6 +112,14 @@ impl ControlPlane {
             .and_then(|b| b.get("message"))
             .and_then(|m| m.as_str())
             .map(str::to_string);
+
+        // The control plane's router answers unknown paths with this message.
+        if missing_is_none
+            && status == StatusCode::NOT_FOUND
+            && message.as_deref() != Some("no such endpoint")
+        {
+            return Ok(None);
+        }
 
         match status {
             StatusCode::BAD_REQUEST | StatusCode::UNPROCESSABLE_ENTITY => {

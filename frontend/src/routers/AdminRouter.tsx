@@ -1,23 +1,85 @@
-import type { AdminRouteDefinition } from 'shared';
-import { faReply } from '@fortawesome/free-solid-svg-icons';
-import { Fragment, Suspense, useEffect, useMemo } from 'react';
-import { NavLink, Route, Routes } from 'react-router';
+import type { AdminRouteDefinition, AdminSidebarCategoryDefinition } from 'shared';
+import { faChevronDown, faChevronRight, faReply } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Collapse, UnstyledButton } from '@mantine/core';
+import { ReactNode, Suspense, useEffect, useMemo, useState } from 'react';
+import { NavLink, Route, Routes, useLocation } from 'react-router';
 import AppIcon from '@/elements/AppIcon.tsx';
 import AdminContentContainer from '@/elements/containers/AdminContentContainer.tsx';
 import ExtensionSlot from '@/elements/ExtensionSlot.tsx';
 import ScreenBlock from '@/elements/feedback/ScreenBlock.tsx';
 import Spinner from '@/elements/feedback/Spinner.tsx';
 import Container from '@/elements/layout/Container.tsx';
+import Divider from '@/elements/layout/Divider.tsx';
 import Sidebar from '@/elements/navigation/Sidebar.tsx';
 import QuickActionsTrigger from '@/elements/quickActions/QuickActionsTrigger.tsx';
 import { resolveString } from '@/lib/lazy.ts';
 import { to } from '@/lib/routes.ts';
+import { safeLocalStorageGet, safeLocalStorageSet } from '@/lib/safeStorage.ts';
 import { checkPermissions, useAdminCan } from '@/plugins/usePermissions.ts';
 import { useAuth } from '@/providers/AuthProvider.tsx';
 import { useTranslations } from '@/providers/TranslationProvider.tsx';
 import AdminPermissionGuard from '@/routers/guards/AdminPermissionGuard.tsx';
 import adminRoutes, { adminSidebarCategoryOrder } from '@/routers/routes/adminRoutes.ts';
 import { useAdminStore } from '@/stores/admin.tsx';
+
+function AdminSidebarCategory({
+  category,
+  routes,
+  children,
+}: {
+  category: AdminSidebarCategoryDefinition;
+  routes: AdminRouteDefinition[];
+  children: ReactNode;
+}) {
+  const { pathname } = useLocation();
+  const storageKey = `admin_sidebar_collapsed:${category.key}`;
+  const [collapsed, setCollapsed] = useState(() => {
+    if (!category.collapsible) return false;
+    const stored = safeLocalStorageGet(storageKey);
+    return stored === null ? !!category.defaultCollapsed : stored === 'true';
+  });
+
+  if (!category.collapsible) {
+    return (
+      <>
+        <Sidebar.Divider label={resolveString(category.label)} />
+        {children}
+      </>
+    );
+  }
+
+  // A collapsed category still opens while one of its pages is showing.
+  const containsActive = routes.some((route) => {
+    const base = to(route.path, '/admin').replace(/\/\*$/, '');
+    return pathname === base || pathname.startsWith(`${base}/`);
+  });
+  const open = !collapsed || containsActive;
+
+  const toggle = () => {
+    setCollapsed(open);
+    safeLocalStorageSet(storageKey, open ? 'true' : 'false');
+  };
+
+  return (
+    <>
+      <UnstyledButton onClick={toggle} aria-expanded={open} className='w-full'>
+        <Divider
+          className='my-2'
+          label={
+            <span className='flex items-center gap-1.5'>
+              {resolveString(category.label)}
+              <FontAwesomeIcon icon={open ? faChevronDown : faChevronRight} size='xs' />
+            </span>
+          }
+        />
+      </UnstyledButton>
+      <Collapse expanded={open}>
+        <div className='flex flex-col'>{children}</div>
+      </Collapse>
+    </>
+  );
+}
 
 export default function AdminRouter({ isNormal }: { isNormal: boolean }) {
   const { t } = useTranslations();
@@ -41,6 +103,20 @@ export default function AdminRouter({ isNormal }: { isNormal: boolean }) {
     return routes;
   }, []);
 
+  const sidebarCategories = useMemo(() => {
+    const registry = window.extensionContext.extensionRegistry.routes;
+    const categories: AdminSidebarCategoryDefinition[] = [
+      ...adminSidebarCategoryOrder,
+      ...registry.adminSidebarCategories,
+    ];
+
+    for (const interceptor of registry.adminSidebarCategoryInterceptors) {
+      interceptor(categories);
+    }
+
+    return categories;
+  }, []);
+
   const sidebarGroups = useMemo(() => {
     const isVisible = (route: AdminRouteDefinition) => {
       if (!route.name || (route.filter && !route.filter())) return false;
@@ -52,14 +128,13 @@ export default function AdminRouter({ isNormal }: { isNormal: boolean }) {
 
     const visible = allAdminRoutes.filter(isVisible);
     const baseUncategorized = new Set(adminRoutes.filter((route) => !route.category).map((route) => route.path));
-    const knownCategories = new Set(adminSidebarCategoryOrder.map((category) => category.key));
+    const knownCategories = new Set(sidebarCategories.map((category) => category.key));
 
     const top = visible.filter((route) => !route.category && baseUncategorized.has(route.path));
 
-    const categories = adminSidebarCategoryOrder
+    const categories = sidebarCategories
       .map((category) => ({
-        key: category.key,
-        label: category.label,
+        category,
         routes: visible.filter((route) => route.category === category.key),
       }))
       .filter((group) => group.routes.length > 0);
@@ -71,7 +146,7 @@ export default function AdminRouter({ isNormal }: { isNormal: boolean }) {
     );
 
     return { top, categories, other };
-  }, [allAdminRoutes, user]);
+  }, [allAdminRoutes, sidebarCategories, user]);
 
   return (
     <div className='lg:flex h-full'>
@@ -108,8 +183,7 @@ export default function AdminRouter({ isNormal }: { isNormal: boolean }) {
               ))}
 
               {sidebarGroups.categories.map((group) => (
-                <Fragment key={group.key}>
-                  <Sidebar.Divider label={resolveString(group.label)} />
+                <AdminSidebarCategory key={group.category.key} category={group.category} routes={group.routes}>
                   {group.routes.map((route) => (
                     <Sidebar.Link
                       key={route.path}
@@ -120,7 +194,7 @@ export default function AdminRouter({ isNormal }: { isNormal: boolean }) {
                       activeMatches={route.activeMatches}
                     />
                   ))}
-                </Fragment>
+                </AdminSidebarCategory>
               ))}
 
               {sidebarGroups.other.length > 0 && (

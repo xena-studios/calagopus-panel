@@ -1,7 +1,8 @@
 //! Routes under `/api/admin`, mounted with `builder.add_admin_api_router`.
 //!
-//! - `/api/admin/hallow/...`: Hallow pages (Fleet settings; the Network page's
-//!   proxies, servers and player count come here too, #24).
+//! - `/api/admin/hallow/...`: Hallow pages: the network overview, player
+//!   lookup, punishment history, anticheat signals and the fleet settings,
+//!   each passed through from the control plane.
 //! - `/api/admin/extensions/dev.xenastudios.hallow/...`: the extension's own
 //!   configuration page.
 

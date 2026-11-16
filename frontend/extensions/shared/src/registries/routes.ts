@@ -1,4 +1,11 @@
-import { AdminRouteDefinition, GlobalRouteDefinition, Registry, RouteDefinition, ServerRouteDefinition } from 'shared';
+import {
+  AdminRouteDefinition,
+  AdminSidebarCategoryDefinition,
+  GlobalRouteDefinition,
+  Registry,
+  RouteDefinition,
+  ServerRouteDefinition,
+} from 'shared';
 
 type RouteInterceptor<I> = (items: I[]) => void;
 
@@ -9,6 +16,8 @@ export class RouteRegistry implements Registry {
     this.accountRoutes.push(...other.accountRoutes);
     this.adminRoutes.push(...other.adminRoutes);
     this.serverRoutes.push(...other.serverRoutes);
+    this.adminSidebarCategories.push(...other.adminSidebarCategories);
+    this.adminSidebarCategoryInterceptors.push(...other.adminSidebarCategoryInterceptors);
 
     return this;
   }
@@ -50,6 +59,18 @@ export class RouteRegistry implements Registry {
    * @since 1.0.2
    */
   public adminRouteInterceptors: RouteInterceptor<AdminRouteDefinition>[] = [];
+  /**
+   * Admin sidebar categories added after the stock ones. An admin route shows under the category whose `key`
+   * matches its `category`.
+   * @since 1.2.11
+   */
+  public adminSidebarCategories: AdminSidebarCategoryDefinition[] = [];
+  /**
+   * Interceptors mutate the merged stock and extension admin sidebar categories in place, so they can reorder,
+   * relabel or collapse them.
+   * @since 1.2.11
+   */
+  public adminSidebarCategoryInterceptors: RouteInterceptor<AdminSidebarCategoryDefinition>[] = [];
   /** @since 1.0.0 */
   public serverRoutes: ServerRouteDefinition[] = [];
   /**
@@ -110,6 +131,20 @@ export class RouteRegistry implements Registry {
   /** @since 1.0.2 */
   public addAdminRouteInterceptor(interceptor: RouteInterceptor<AdminRouteDefinition>): this {
     this.adminRouteInterceptors.push(interceptor);
+
+    return this;
+  }
+
+  /** @since 1.2.11 */
+  public addAdminSidebarCategory(category: AdminSidebarCategoryDefinition): this {
+    this.adminSidebarCategories.push(category);
+
+    return this;
+  }
+
+  /** @since 1.2.11 */
+  public addAdminSidebarCategoryInterceptor(interceptor: RouteInterceptor<AdminSidebarCategoryDefinition>): this {
+    this.adminSidebarCategoryInterceptors.push(interceptor);
 
     return this;
   }
