@@ -319,12 +319,6 @@ importers:
         specifier: workspace:*
         version: link:../../../frontend/extensions/shared
 
-  extensions/dev_xenastudios_hallow:
-    dependencies:
-      shared:
-        specifier: workspace:*
-        version: link:../shared
-
   extensions/shared: {}
 
 packages:
