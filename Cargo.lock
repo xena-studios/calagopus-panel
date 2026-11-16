@@ -2368,9 +2368,14 @@ dependencies = [
 name = "dev_xenastudios_hallow"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "axum",
+ "compact_str 0.10.0",
+ "indexmap 2.14.2",
+ "reqwest",
  "serde",
+ "serde_json",
  "shared",
  "tracing",
  "utoipa",

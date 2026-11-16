@@ -1,14 +1,13 @@
-//! Routes under `/api/hallow`, unauthenticated. The file tree mirrors the URL
-//! tree, as in the core panel.
+//! Routes. The file tree mirrors the URL tree, as in the core panel.
 //!
-//! Staff-only routes (the Network page's proxies, servers and player count from
-//! the control plane, #24) belong under `/api/admin/hallow` instead: add them
-//! with `builder.add_admin_api_router` in `lib.rs`, so the panel's admin
-//! authentication runs first.
+//! - `/api/hallow` (this module): public, unauthenticated.
+//! - `/api/admin/...` ([`admin`]): staff only. The panel's admin
+//!   authentication runs first; each handler checks its own permission.
 
 use shared::State;
 use utoipa_axum::router::OpenApiRouter;
 
+pub mod admin;
 mod health;
 
 pub fn router(state: &State) -> OpenApiRouter<State> {
