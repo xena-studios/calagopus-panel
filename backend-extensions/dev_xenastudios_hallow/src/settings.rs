@@ -14,6 +14,9 @@ pub struct HallowSettings {
     pub control_plane_url: compact_str::CompactString,
     /// Bearer token for the control plane's API. Stored encrypted.
     pub control_plane_token: compact_str::CompactString,
+    /// Base URL of the Prometheus that scrapes the control plane, such as
+    /// `http://prometheus:9090`, for the Stats page. Empty turns the charts off.
+    pub prometheus_url: compact_str::CompactString,
 }
 
 #[async_trait::async_trait]
@@ -25,7 +28,8 @@ impl SettingsSerializeExt for HallowSettings {
         Ok(serializer
             .write_raw_setting("control_plane_url", self.control_plane_url.clone())
             .write_raw_encrypted_setting("control_plane_token", self.control_plane_token.clone())
-            .await?)
+            .await?
+            .write_raw_setting("prometheus_url", self.prometheus_url.clone()))
     }
 }
 
@@ -54,6 +58,9 @@ impl SettingsDeserializeExt for HallowSettingsDeserializer {
                 .take_raw_setting("control_plane_url")
                 .unwrap_or_default(),
             control_plane_token,
+            prometheus_url: deserializer
+                .take_raw_setting("prometheus_url")
+                .unwrap_or_default(),
         }))
     }
 }

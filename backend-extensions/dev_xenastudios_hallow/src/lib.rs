@@ -73,6 +73,11 @@ impl Extension for ExtensionStruct {
                         "Allows creating, editing and deleting Hallow ranks, and giving or taking them from players.",
                     ),
                     ("anticheat.read", "Allows viewing players' anticheat signals."),
+                    ("reports.read", "Allows viewing player reports: the queue and their history."),
+                    (
+                        "reports.manage",
+                        "Allows claiming, resolving and dismissing player reports.",
+                    ),
                     (
                         "instances.read",
                         "Allows viewing the lobby and game instances the control plane runs: state, node, address and players.",

@@ -1,5 +1,5 @@
 //! `GET`/`PUT /api/admin/extensions/dev.xenastudios.hallow/settings`: the
-//! control plane URL and token, edited on the extension's configuration page.
+//! control plane URL and token and the Prometheus URL, edited on the extension's configuration page.
 //! The token is never sent back, only whether one is set.
 
 use shared::State;
@@ -20,6 +20,7 @@ mod get {
     struct Settings {
         control_plane_url: compact_str::CompactString,
         control_plane_token_set: bool,
+        prometheus_url: compact_str::CompactString,
     }
 
     #[derive(ToSchema, Serialize)]
@@ -42,6 +43,7 @@ mod get {
             settings: Settings {
                 control_plane_url: hallow.control_plane_url.clone(),
                 control_plane_token_set: !hallow.control_plane_token.is_empty(),
+                prometheus_url: hallow.prometheus_url.clone(),
             },
         })
         .ok()
@@ -67,6 +69,9 @@ mod put {
         /// New bearer token. Leave out to keep the current one; empty clears it.
         #[schema(max_length = 1024)]
         control_plane_token: Option<compact_str::CompactString>,
+        /// Base URL of Prometheus, for the Stats page (http or https). Empty clears it.
+        #[schema(max_length = 255)]
+        prometheus_url: Option<compact_str::CompactString>,
     }
 
     #[derive(ToSchema, Serialize)]
@@ -87,17 +92,27 @@ mod put {
             .control_plane_url
             .map(|url| compact_str::CompactString::from(url.trim().trim_end_matches('/')));
 
-        if let Some(url) = url.as_deref().filter(|url| !url.is_empty()) {
+        let prometheus_url = data
+            .prometheus_url
+            .map(|url| compact_str::CompactString::from(url.trim().trim_end_matches('/')));
+
+        for (field, url) in [
+            ("control_plane_url", url.as_deref()),
+            ("prometheus_url", prometheus_url.as_deref()),
+        ] {
+            let Some(url) = url.filter(|url| !url.is_empty()) else {
+                continue;
+            };
             if url.len() > 255 {
-                return ApiResponse::error("control_plane_url: must be at most 255 characters")
+                return ApiResponse::error(format!("{field}: must be at most 255 characters"))
                     .ok();
             }
             match reqwest::Url::parse(url) {
                 Ok(parsed) if matches!(parsed.scheme(), "http" | "https") => {}
                 _ => {
-                    return ApiResponse::error(
-                        "control_plane_url: must be an http:// or https:// URL",
-                    )
+                    return ApiResponse::error(format!(
+                        "{field}: must be an http:// or https:// URL"
+                    ))
                     .ok();
                 }
             }
@@ -120,14 +135,18 @@ mod put {
             if let Some(url) = url {
                 hallow.control_plane_url = url;
             }
+            if let Some(prometheus_url) = prometheus_url {
+                hallow.prometheus_url = prometheus_url;
+            }
             if let Some(token) = data.control_plane_token {
                 hallow.control_plane_token = token.trim().into();
             }
-            let saved_url = hallow.control_plane_url.clone();
+            let saved = (hallow.control_plane_url.clone(), hallow.prometheus_url.clone());
 
             settings.save().await?;
-            saved_url
+            saved
         };
+        let (saved_url, saved_prometheus_url) = saved_url;
 
         activity_logger
             .log(
@@ -135,6 +154,7 @@ mod put {
                 serde_json::json!({
                     "extension": crate::PACKAGE_NAME,
                     "control_plane_url": saved_url,
+                    "prometheus_url": saved_prometheus_url,
                     "control_plane_token_changed": token_changed,
                 }),
             )
